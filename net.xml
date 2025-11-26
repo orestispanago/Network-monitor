@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.94SVN scan initiated Wed Nov 26 16:35:33 2025 as: nmap -sn -oX net.xml 10.200.20.130-154 -->
+<nmaprun scanner="nmap" args="nmap -sn -oX net.xml 10.200.20.130-154" start="1764164133" startstr="Wed Nov 26 16:35:33 2025" version="7.94SVN" xmloutputversion="1.05">
+<verbose level="0"/>
+<debugging level="0"/>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.200.20.132" addrtype="ipv4"/>
+<address addr="98:BA:5F:06:B3:DF" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<times srtt="3597" rttvar="5000" to="100000"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.200.20.136" addrtype="ipv4"/>
+<address addr="28:6B:35:B4:DB:1A" addrtype="mac" vendor="Intel Corporate"/>
+<hostnames>
+</hostnames>
+<times srtt="91095" rttvar="91095" to="455475"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.200.20.139" addrtype="ipv4"/>
+<address addr="9C:53:22:E2:57:C2" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<times srtt="2771" rttvar="5000" to="100000"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.200.20.140" addrtype="ipv4"/>
+<address addr="14:EB:B6:68:34:6B" addrtype="mac" vendor="TP-Link Limited"/>
+<hostnames>
+</hostnames>
+<times srtt="14046" rttvar="14046" to="100000"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="10.200.20.153" addrtype="ipv4"/>
+<address addr="68:7A:64:8E:FE:22" addrtype="mac" vendor="Intel Corporate"/>
+<hostnames>
+</hostnames>
+<times srtt="3060" rttvar="3760" to="100000"/>
+</host>
+<host><status state="up" reason="localhost-response" reason_ttl="0"/>
+<address addr="10.200.20.154" addrtype="ipv4"/>
+<hostnames>
+<hostname name="workstation" type="PTR"/>
+</hostnames>
+</host>
+<runstats><finished time="1764164134" timestr="Wed Nov 26 16:35:34 2025" summary="Nmap done at Wed Nov 26 16:35:34 2025; 25 IP addresses (6 hosts up) scanned in 1.38 seconds" elapsed="1.38" exit="success"/><hosts up="6" down="19" total="25"/>
+</runstats>
+</nmaprun>
