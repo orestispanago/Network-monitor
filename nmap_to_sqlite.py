@@ -1,38 +1,33 @@
-import xml.etree.ElementTree as ET
 import sqlite3
+from xml_parser import get_xml_hosts
 
-xml_file = "/home/orestis/net.xml"
+xml_file = "net.xml"
 db_file = "nmap_results.db"
 
-tree = ET.parse(xml_file)
-root = tree.getroot()
+hosts = get_xml_hosts(xml_file)
 
-nmap_start = root.attrib.get("startstr")
 conn = sqlite3.connect(db_file)
 cursor = conn.cursor()
 
-cursor.execute('''
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS hosts (
     ip TEXT,
     mac TEXT,
     vendor TEXT,
-    nmap_start TEXT
+    last_seen TEXT
 )
-''')
+"""
+)
 
-for host in root.findall("host"):
-    ip = mac = vendor = None
-    for addr in host.findall("address"):
-        if addr.attrib["addrtype"] == "ipv4":
-            ip = addr.attrib["addr"]
-        elif addr.attrib["addrtype"] == "mac":
-            mac = addr.attrib["addr"]
-            vendor = addr.attrib.get("vendor")
-    
-    cursor.execute('''
-        INSERT INTO hosts (ip, mac, vendor, nmap_start)
+for host in hosts:
+    cursor.execute(
+        """
+        INSERT INTO hosts (ip, mac, vendor, last_seen)
         VALUES (?, ?, ?, ?)
-    ''', (ip, mac, vendor, nmap_start))
+    """,
+        (host.ip_address, host.mac_address, host.vendor, host.last_seen),
+    )
 
 conn.commit()
 conn.close()
