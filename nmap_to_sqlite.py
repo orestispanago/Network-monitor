@@ -44,25 +44,24 @@ def get_xml_hosts(xml_file):
 def update_database(xml_file, db_file):
     hosts = get_xml_hosts(xml_file)
     host_data = [host.to_sqlite_row() for host in hosts]
-    with sqlite3.connect(db_file) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS hosts (
-                ip TEXT PRIMARY KEY,
-                mac TEXT,
-                vendor TEXT,
-                last_seen TEXT
-            )
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute(
         """
+        CREATE TABLE IF NOT EXISTS hosts (
+            ip TEXT PRIMARY KEY,
+            mac TEXT,
+            vendor TEXT,
+            last_seen TEXT
         )
-        cursor.executemany(
-            """
-            INSERT OR REPLACE INTO hosts (ip, mac, vendor, last_seen)
-            VALUES (?, ?, ?, ?)
-        """,
-            host_data,
-        )
-
-
-update_database("net.xml", "nmap_results.db")
+    """
+    )
+    cursor.executemany(
+        """
+        INSERT OR REPLACE INTO hosts (ip, mac, vendor, last_seen)
+        VALUES (?, ?, ?, ?)
+    """,
+        host_data,
+    )
+    conn.commit()
+    conn.close()
