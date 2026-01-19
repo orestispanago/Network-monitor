@@ -10,6 +10,7 @@ import logging
 import logging.config
 import os
 import traceback
+from devices import DEVICE_MAP
 
 dname = os.path.dirname(__file__)
 os.chdir(dname)
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 DB_NAME = "network.db"
 CSV_NAME = "network.csv"
-IP_RANGE = "192.168.8.2-5"
+IP_RANGE = ""
 FTP_IP = ""
 FTP_USER = ""
 FTP_PASSWORD = ""
@@ -32,6 +33,7 @@ class Host:
     mac: str
     vendor: str
     last_seen: str
+    description: str
 
 
 def create_ip_list():
@@ -50,7 +52,8 @@ def setup_db(ip_list):
             ip TEXT PRIMARY KEY,
             mac TEXT,
             vendor TEXT,
-            last_seen DATETIME
+            last_seen DATETIME,
+            description TEXT
         )
         """
     )
@@ -70,7 +73,7 @@ def run_nmap_scan():
 
 def parse_nmap_xml(xml_data):
     logger.debug("Parsing nmap xml output")
-    scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    scan_time = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z %Z")
     root = ET.fromstring(xml_data)
     hosts = []
     for host in root.findall("host"):
@@ -83,7 +86,14 @@ def parse_nmap_xml(xml_data):
                 elif addr_type == "mac":
                     mac = addr.get("addr")
                     vendor = addr.get("vendor", "Unknown")
-        host = Host(ip=ip, mac=mac, vendor=vendor, last_seen=scan_time)
+        description = DEVICE_MAP.get(mac, "Unknown Device")
+        host = Host(
+            ip=ip,
+            mac=mac,
+            vendor=vendor,
+            last_seen=scan_time,
+            description=description,
+        )
         hosts.append(host)
     logger.debug(f"Found {len(hosts)} hosts")
     return hosts
@@ -96,10 +106,10 @@ def update_db(hosts_list):
         curr.execute(
             """
             UPDATE hosts 
-            SET mac = ?, vendor = ?, last_seen = ? 
+            SET mac = ?, vendor = ?, last_seen = ? , description = ?
             WHERE ip = ?
             """,
-            (host.mac, host.vendor, host.last_seen, host.ip),
+            (host.mac, host.vendor, host.last_seen, host.description, host.ip),
         )
     conn.commit()
     conn.close()
