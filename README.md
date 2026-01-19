@@ -2,15 +2,12 @@
 
 Parse `nmap` xml output and store to sqlite database to monitor local network.
 
+Exports db to csv and uploads to FTP
 
-Run `nmap` in a crontab to scan your local network in regular intervals.
+This script is intended to run in a **sudo crontab**, not a user crontab.
 
-Save the output in xml
-
-`nmap` command:
+`nmap` command example:
 
 ``` bash
-sudo nmap -v -sn 10.200.20.130-154 -oX net.xml
+sudo nmap -sn 10.200.20.130-154 -oX net.xml
 ```
-
-The `-v` flag includes down hosts.
