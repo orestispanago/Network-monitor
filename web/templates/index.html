@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab Subnet Monitor</title>
+</head>
+
+<body>
+    <h2>Lab Subnet Monitor</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>IP</th>
+                <th>Description</th>
+                <th>MAC</th>
+                <th>Vendor</th>
+                <th>Last seen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for device in devices %}
+            <tr>
+                <td class="ip">{{ device.ip }}</td>
+                <td>{{ device.description or 'Unassigned' }}</td>
+                <td class="ip">{{ device.mac or 'N/A' }}</td>
+                <td>{{ device.vendor or 'Unknown' }}</td>
+                <td>
+                    {% if device.last_seen %}
+                    <span class="online">{{ device.last_seen }}</span>
+                    {% else %}
+                    <span class="offline">Offline</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>
