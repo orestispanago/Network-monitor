@@ -46,8 +46,7 @@ def setup_db(ip_list):
     """Initializes the DB and pre-populates IPs if they don't exist."""
     conn = sqlite3.connect(DB_NAME)
     curr = conn.cursor()
-    curr.execute(
-        """
+    curr.execute("""
         CREATE TABLE IF NOT EXISTS hosts (
             ip TEXT PRIMARY KEY,
             mac TEXT,
@@ -55,8 +54,7 @@ def setup_db(ip_list):
             last_seen DATETIME,
             description TEXT
         )
-        """
-    )
+        """)
     for ip in ip_list:
         curr.execute("INSERT OR IGNORE INTO hosts (ip) VALUES (?)", (ip,))
     conn.commit()
@@ -79,6 +77,7 @@ def parse_nmap_xml(xml_data):
     for host in root.findall("host"):
         status = host.find("status")
         if status is not None and status.get("state") == "up":
+            ip, mac, vendor = None, None, "Unknown"
             for addr in host.findall("address"):
                 addr_type = addr.get("addrtype")
                 if addr_type == "ipv4":
@@ -86,33 +85,70 @@ def parse_nmap_xml(xml_data):
                 elif addr_type == "mac":
                     mac = addr.get("addr")
                     vendor = addr.get("vendor", "Unknown")
-        description = DEVICE_MAP.get(mac, "Unknown Device")
-        host = Host(
-            ip=ip,
-            mac=mac,
-            vendor=vendor,
-            last_seen=scan_time,
-            description=description,
-        )
-        hosts.append(host)
+            if ip and mac:
+                description = DEVICE_MAP.get(mac, "Unknown Device")
+                parsed_host = Host(
+                    ip=ip,
+                    mac=mac,
+                    vendor=vendor,
+                    last_seen=scan_time,
+                    description=description,
+                )
+                hosts.append(parsed_host)
     logger.debug(f"Found {len(hosts)} hosts")
     return hosts
 
 
-def update_db(hosts_list):
-    conn = sqlite3.connect(DB_NAME)
-    curr = conn.cursor()
-    for host in hosts_list:
-        curr.execute(
-            """
-            UPDATE hosts 
-            SET mac = ?, vendor = ?, last_seen = ? , description = ?
-            WHERE ip = ?
-            """,
-            (host.mac, host.vendor, host.last_seen, host.description, host.ip),
+def clear_duplicate_macs(cursor):
+    """Finds duplicate MACs and sets all but last occurence fields to NULL"""
+    cursor.execute(
+        """
+        WITH RankedHosts AS (
+            SELECT 
+                ip,
+                ROW_NUMBER() OVER (
+                    PARTITION BY mac 
+                    ORDER BY last_seen DESC, ip DESC
+                ) as rn
+            FROM hosts
+            WHERE mac IS NOT NULL
         )
-    conn.commit()
-    conn.close()
+        UPDATE hosts
+        SET 
+            mac = NULL,
+            vendor = NULL,
+            last_seen = NULL,
+            description = NULL
+        WHERE ip IN (
+            SELECT ip 
+            FROM RankedHosts 
+            WHERE rn > 1
+        );
+        """,
+    )
+    logger.debug("Cleared duplicate MAC addressses keeping most recent")
+
+
+def update_db(hosts_list):
+    with sqlite3.connect(DB_NAME) as conn:
+        curr = conn.cursor()
+        clear_duplicate_macs(curr)
+        for host in hosts_list:
+            curr.execute(
+                """
+                UPDATE hosts 
+                SET mac = ?, vendor = ?, last_seen = ?, description = ?
+                WHERE ip = ?
+                """,
+                (
+                    host.mac,
+                    host.vendor,
+                    host.last_seen,
+                    host.description,
+                    host.ip,
+                ),
+            )
+        conn.commit()
 
 
 def db_to_csv():
