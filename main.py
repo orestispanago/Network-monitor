@@ -61,6 +61,22 @@ def setup_db(ip_list):
     conn.close()
 
 
+def get_local_ip_mac():
+    cmd = ["ip", "route", "get", "1.1.1.1"]
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    output = result.stdout.split()
+    iface = output[output.index("dev") + 1]
+    ip_addr = output[output.index("src") + 1]
+    with open(f"/sys/class/net/{iface}/address", "r") as f:
+        mac_addr = f.read().strip().upper()
+    return ip_addr, mac_addr
+
+
 def run_nmap_scan():
     logger.debug("Running nmap...")
     cmd = ["sudo", "nmap", "-sn", IP_RANGE, "-oX", "-"]
@@ -74,6 +90,7 @@ def parse_nmap_xml(xml_data):
     scan_time = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z %Z")
     root = ET.fromstring(xml_data)
     hosts = []
+    local_ip, local_mac = get_local_ip_mac()
     for host in root.findall("host"):
         status = host.find("status")
         if status is not None and status.get("state") == "up":
@@ -85,6 +102,8 @@ def parse_nmap_xml(xml_data):
                 elif addr_type == "mac":
                     mac = addr.get("addr")
                     vendor = addr.get("vendor", "Unknown")
+            if ip == local_ip:
+                mac = local_mac
             if ip and mac:
                 description = DEVICE_MAP.get(mac, "Unknown Device")
                 parsed_host = Host(
@@ -126,7 +145,7 @@ def clear_duplicate_macs(cursor):
         );
         """,
     )
-    logger.debug("Cleared duplicate MAC addressses keeping most recent")
+    logger.debug("Cleared duplicate MAC addressses keeping most recent IP")
 
 
 def update_db(hosts_list):
