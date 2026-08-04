@@ -10,7 +10,6 @@ import logging
 import logging.config
 import os
 import traceback
-from devices import DEVICE_MAP
 
 dname = os.path.dirname(__file__)
 os.chdir(dname)
@@ -19,6 +18,8 @@ logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
 
 DB_NAME = "network.db"
+SCANS_TABLE = "network_scans"
+DEVICES_TABLE = "known_devices"
 CSV_NAME = "network.csv"
 IP_RANGE = ""
 FTP_IP = ""
@@ -42,12 +43,12 @@ def create_ip_list():
     return [f"{prefix}.{i}" for i in range(start, end + 1)]
 
 
-def setup_db(ip_list):
+def setup_db(ip_list, table=SCANS_TABLE):
     """Initializes the DB and pre-populates IPs if they don't exist."""
     conn = sqlite3.connect(DB_NAME)
     curr = conn.cursor()
-    curr.execute("""
-        CREATE TABLE IF NOT EXISTS hosts (
+    curr.execute(f"""
+        CREATE TABLE IF NOT EXISTS {table} (
             ip TEXT PRIMARY KEY,
             mac TEXT,
             vendor TEXT,
@@ -56,7 +57,7 @@ def setup_db(ip_list):
         )
         """)
     for ip in ip_list:
-        curr.execute("INSERT OR IGNORE INTO hosts (ip) VALUES (?)", (ip,))
+        curr.execute(f"INSERT OR IGNORE INTO {table} (ip) VALUES (?)", (ip,))
     conn.commit()
     conn.close()
 
@@ -85,12 +86,21 @@ def run_nmap_scan():
     return result.stdout
 
 
+def get_known_device_descriptions(table=DEVICES_TABLE) -> dict:
+    """Fetches all known MAC address descriptions into a dictionary at once."""
+    with sqlite3.connect(DB_NAME) as conn:
+        curr = conn.cursor()
+        curr.execute(f"SELECT mac_address, description FROM '{table}'")
+        return {row[0]: row[1] for row in curr.fetchall()}
+
+
 def parse_nmap_xml(xml_data):
     logger.debug("Parsing nmap xml output")
     scan_time = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z %Z")
     root = ET.fromstring(xml_data)
     hosts = []
     local_ip, local_mac = get_local_ip_mac()
+    known_devices = get_known_device_descriptions()
     for host in root.findall("host"):
         status = host.find("status")
         if status is not None and status.get("state") == "up":
@@ -105,7 +115,7 @@ def parse_nmap_xml(xml_data):
             if ip == local_ip:
                 mac = local_mac
             if ip and mac:
-                description = DEVICE_MAP.get(mac, "Unknown Device")
+                description = known_devices.get(mac, "Unknown Device")
                 parsed_host = Host(
                     ip=ip,
                     mac=mac,
@@ -118,23 +128,23 @@ def parse_nmap_xml(xml_data):
     return hosts
 
 
-def clear_duplicate_macs(cursor):
+def clear_duplicate_macs(cursor, table=SCANS_TABLE):
     """Finds duplicate MACs and sets all but last occurence fields to NULL"""
     cursor.execute(
-        """
+        f"""
         WITH RankedHosts AS (
             SELECT 
                 ip,
                 ROW_NUMBER() OVER (
-                    PARTITION BY mac 
+                    PARTITION BY mac_address 
                     ORDER BY last_seen DESC, ip DESC
                 ) as rn
-            FROM hosts
-            WHERE mac IS NOT NULL
+            FROM {table}
+            WHERE mac_address IS NOT NULL
         )
-        UPDATE hosts
+        UPDATE {table}
         SET 
-            mac = NULL,
+            mac_address = NULL,
             vendor = NULL,
             last_seen = NULL,
             description = NULL
@@ -148,15 +158,15 @@ def clear_duplicate_macs(cursor):
     logger.debug("Cleared duplicate MAC addressses keeping most recent IP")
 
 
-def update_db(hosts_list):
+def update_db(hosts_list, table=SCANS_TABLE):
     with sqlite3.connect(DB_NAME) as conn:
         curr = conn.cursor()
         clear_duplicate_macs(curr)
         for host in hosts_list:
             curr.execute(
-                """
-                UPDATE hosts 
-                SET mac = ?, vendor = ?, last_seen = ?, description = ?
+                f"""
+                UPDATE {table} 
+                SET mac_address = ?, vendor = ?, last_seen = ?, description = ?
                 WHERE ip = ?
                 """,
                 (
@@ -170,11 +180,11 @@ def update_db(hosts_list):
         conn.commit()
 
 
-def db_to_csv():
-    logger.debug(f"Exporting 'hosts' table from {DB_NAME} to {CSV_NAME}")
+def db_table_to_csv(table=SCANS_TABLE):
+    logger.debug(f"Exporting {table} table to {CSV_NAME}")
     conn = sqlite3.connect(DB_NAME)
     curr = conn.cursor()
-    curr.execute("SELECT * FROM hosts ORDER BY ip")
+    curr.execute(f"SELECT * FROM {table} ORDER BY ip")
     rows = curr.fetchall()
     sorted_rows = sorted(rows, key=lambda x: ipaddress.IPv4Address(x[0]))
     headers = [description[0] for description in curr.description]
@@ -203,7 +213,7 @@ def main():
     xml_output = run_nmap_scan()
     hosts = parse_nmap_xml(xml_output)
     update_db(hosts)
-    db_to_csv()
+    db_table_to_csv()
     upload_csv()
     logger.info(f"{'-' * 15} SUCCESS {'-' * 15}")
 

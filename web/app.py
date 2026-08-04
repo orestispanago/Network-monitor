@@ -19,12 +19,12 @@ def verify_password(username, password):
         return username
 
 
-def get_db_data():
+def get_network_scan_data(table="network_scans"):
     # URI mode opens the database in read-only mode to prevent locks with your scanner
     conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     curr = conn.cursor()
-    curr.execute("SELECT * FROM hosts ORDER BY ip")
+    curr.execute(f"SELECT * FROM {table} ORDER BY ip")
     rows = curr.fetchall()
     sorted_rows = sorted(rows, key=lambda x: ipaddress.IPv4Address(x[0]))
     headers = [description[0] for description in curr.description]
@@ -32,10 +32,33 @@ def get_db_data():
     return sorted_rows
 
 
+def get_network_map():
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    curr = conn.cursor()
+    curr.execute("""
+    SELECT 
+        network_scans.ip, 
+        network_scans.mac_address, 
+        known_devices.administrator, 
+        known_devices.device_type, 
+        known_devices.hostname, 
+        known_devices.description,
+        known_devices.floor, 
+        known_devices.ethernet_port,
+        network_scans.last_seen
+        FROM network_scans
+    LEFT JOIN known_devices 
+    ON network_scans.mac_address = known_devices.mac_address;""")
+    rows = curr.fetchall()
+    conn.close()
+    return rows
+
+
 @app.route("/")
 @auth.login_required
 def index():
-    devices = get_db_data()
+    devices = get_network_map()
     return render_template("index.html", devices=devices)
 
 
