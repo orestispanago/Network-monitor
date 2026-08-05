@@ -31,16 +31,16 @@
             <tr>
                 <td class="ip">{{ device.ip }}</td>
                 <td class="ip">{{ device.mac_address or '-' }}</td>
-                <td> {{device.administrator or '-'}}</td>
+                <td>{{device.administrator or '-'}}</td>
                 <td>{{ device.device_type or '-' }}</td>
                 <td>{{ device.description or '-' }}</td>
-                <td> {{device.floor or '-'}}</td>
-                <td> {{device.ethernet_port or '-'}}</td>
+                <td>{{device.floor or '-'}}</td>
+                <td>{{device.ethernet_port or '-'}}</td>
                 <td>
                     {% if device.last_seen %}
-                    <span class="online">{{ device.last_seen }}</span>
+                    <time class="utc-time">{{ device.last_seen }}</time>
                     {% else %}
-                    <span class="offline">-</span>
+                    <span>-</span>
                     {% endif %}
                 </td>
             </tr>
@@ -48,5 +48,17 @@
         </tbody>
     </table>
 </body>
+<script>
+    document.querySelectorAll('time.utc-time').forEach(el => {
+        const rawIso = el.getAttribute('datetime') || el.textContent.trim();
+        const date = new Date(rawIso);
+        if (isNaN(date.getTime())) return;
+        el.title = `${date.toISOString()}`; // full precision tooltip
+        el.textContent = new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium', // e.g., "Aug 5, 2026"
+            timeStyle: 'short'   // e.g., "12:29 PM"
+        }).format(date);
+    });
+</script>
 
 </html>

@@ -1,9 +1,7 @@
 import sqlite3
 import subprocess
 import xml.etree.ElementTree as ET
-import csv
-from datetime import datetime
-import ipaddress
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from ftplib import FTP
 import logging
@@ -34,7 +32,6 @@ class Host:
     mac: str
     vendor: str
     last_seen: str
-    description: str
 
 
 def create_ip_list():
@@ -43,8 +40,8 @@ def create_ip_list():
     return [f"{prefix}.{i}" for i in range(start, end + 1)]
 
 
-def setup_db(ip_list, table=SCANS_TABLE):
-    """Initializes the DB and pre-populates IPs if they don't exist."""
+def setup_db_table(ip_list, table=SCANS_TABLE):
+    """Initializes scans table in DB and populates IPs if they don't exist."""
     conn = sqlite3.connect(DB_NAME)
     curr = conn.cursor()
     curr.execute(f"""
@@ -52,8 +49,7 @@ def setup_db(ip_list, table=SCANS_TABLE):
             ip TEXT PRIMARY KEY,
             mac TEXT,
             vendor TEXT,
-            last_seen DATETIME,
-            description TEXT
+            last_seen DATETIME
         )
         """)
     for ip in ip_list:
@@ -86,21 +82,12 @@ def run_nmap_scan():
     return result.stdout
 
 
-def get_known_device_descriptions(table=DEVICES_TABLE) -> dict:
-    """Fetches all known MAC address descriptions into a dictionary at once."""
-    with sqlite3.connect(DB_NAME) as conn:
-        curr = conn.cursor()
-        curr.execute(f"SELECT mac_address, description FROM '{table}'")
-        return {row[0]: row[1] for row in curr.fetchall()}
-
-
 def parse_nmap_xml(xml_data):
     logger.debug("Parsing nmap xml output")
-    scan_time = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z %Z")
+    scan_time = datetime.now(timezone.utc).isoformat()
     root = ET.fromstring(xml_data)
     hosts = []
     local_ip, local_mac = get_local_ip_mac()
-    known_devices = get_known_device_descriptions()
     for host in root.findall("host"):
         status = host.find("status")
         if status is not None and status.get("state") == "up":
@@ -115,13 +102,11 @@ def parse_nmap_xml(xml_data):
             if ip == local_ip:
                 mac = local_mac
             if ip and mac:
-                description = known_devices.get(mac, "Unknown Device")
                 parsed_host = Host(
                     ip=ip,
                     mac=mac,
                     vendor=vendor,
                     last_seen=scan_time,
-                    description=description,
                 )
                 hosts.append(parsed_host)
     logger.debug(f"Found {len(hosts)} hosts")
@@ -146,8 +131,7 @@ def clear_duplicate_macs(cursor, table=SCANS_TABLE):
         SET 
             mac_address = NULL,
             vendor = NULL,
-            last_seen = NULL,
-            description = NULL
+            last_seen = NULL
         WHERE ip IN (
             SELECT ip 
             FROM RankedHosts 
@@ -166,55 +150,36 @@ def update_db(hosts_list, table=SCANS_TABLE):
             curr.execute(
                 f"""
                 UPDATE {table} 
-                SET mac_address = ?, vendor = ?, last_seen = ?, description = ?
+                SET mac_address = ?, vendor = ?, last_seen = ?
                 WHERE ip = ?
                 """,
                 (
                     host.mac,
                     host.vendor,
                     host.last_seen,
-                    host.description,
                     host.ip,
                 ),
             )
         conn.commit()
 
 
-def db_table_to_csv(table=SCANS_TABLE):
-    logger.debug(f"Exporting {table} table to {CSV_NAME}")
-    conn = sqlite3.connect(DB_NAME)
-    curr = conn.cursor()
-    curr.execute(f"SELECT * FROM {table} ORDER BY ip")
-    rows = curr.fetchall()
-    sorted_rows = sorted(rows, key=lambda x: ipaddress.IPv4Address(x[0]))
-    headers = [description[0] for description in curr.description]
-    conn.close()
-
-    with open(CSV_NAME, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(headers)
-        writer.writerows(sorted_rows)
-    logger.debug(f"Exported {len(rows)} rows to {CSV_NAME}")
-
-
-def upload_csv():
+def upload_to_ftp(fname):
     with FTP(FTP_IP, FTP_USER, FTP_PASSWORD) as ftp_session:
         ftp_session.cwd(FTP_DIR)
-        remote_path = f"{FTP_DIR}/{CSV_NAME}"
-        with open(CSV_NAME, "rb") as f:
+        remote_path = f"{FTP_DIR}/{fname}"
+        with open(fname, "rb") as f:
             ftp_session.storbinary(f"STOR {remote_path}", f)
-    logger.debug(f"Uploaded {CSV_NAME} to {remote_path}")
+    logger.debug(f"Uploaded {fname} to {remote_path}")
 
 
 def main():
     logger.info(f"{'-' * 15} START {'-' * 15}")
     ip_list = create_ip_list()
-    setup_db(ip_list)
+    setup_db_table(ip_list)
     xml_output = run_nmap_scan()
     hosts = parse_nmap_xml(xml_output)
     update_db(hosts)
-    db_table_to_csv()
-    upload_csv()
+    upload_to_ftp(DB_NAME)
     logger.info(f"{'-' * 15} SUCCESS {'-' * 15}")
 
 
