@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Known Device{% endblock %}
+{% block page_title %}Edit Known Device{% endblock %}
+
+{% block content %}
+<form method="POST">
+    {% include 'device_form.html' %}
+
+    <div class="actions">
+        <button type="submit">Save Changes</button>
+        <a href="{{ url_for('index') }}" class="btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

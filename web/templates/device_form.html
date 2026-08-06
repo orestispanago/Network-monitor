@@ -1,0 +1,42 @@
+<div class="form-group">
+    <label>MAC Address</label>
+    <input value="{{ mac_address }}" readonly disabled />
+</div>
+
+<div class="form-group">
+    <label for="hostname">Hostname</label>
+    <input id="hostname" name="hostname" value="{{ device.hostname if device else '' }}" />
+</div>
+
+<div class="form-group">
+    <label for="administrator">Administrator</label>
+    <input id="administrator" name="administrator" value="{{ device.administrator if device else '' }}" required />
+</div>
+
+<div class="form-group">
+    <label for="device_type">Device Type</label>
+    <select id="device_type" name="device_type">
+        {% set current_type = device.device_type if device else '' %}
+        {% for option in ['PC', 'Raspberry', 'Server', 'Mini PC', 'NAS', 'Printer', 'Access point'] %}
+        <option value="{{ option }}" {% if current_type==option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="form-group">
+    <label for="description">Description</label>
+    <input id="description" name="description" value="{{ device.description if device else '' }}" />
+</div>
+
+<div class="form-group">
+    <label for="floor">Floor</label>
+    <select id="floor" name="floor">
+        <option value="2" {% if not device or device.floor|int==2 %}selected{% endif %}>2</option>
+        <option value="3" {% if device and device.floor|int==3 %}selected{% endif %}>3</option>
+    </select>
+</div>
+
+<div class="form-group">
+    <label for="ethernet_port">Ethernet Port</label>
+    <input id="ethernet_port" name="ethernet_port" value="{{ device.ethernet_port if device else '' }}" />
+</div>

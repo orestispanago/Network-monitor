@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Lab Subnet monitor{% endblock %}</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 2rem;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <header>
+        <h2>{% block page_title %}Lab Subnet Monitor{% endblock %}</h2>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        document.querySelectorAll('time.utc-time').forEach(el => {
+            const rawIso = el.getAttribute('datetime') || el.textContent.trim();
+            const date = new Date(rawIso);
+            if (isNaN(date.getTime())) return;
+            el.title = date.toISOString();
+            el.textContent = new Intl.DateTimeFormat(undefined, {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            }).format(date);
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>
