@@ -11,9 +11,15 @@
 
 <body>
     <div class="container">
-        <header>
-            <h2>{% block page_title %}Lab Subnet Monitor{% endblock %}</h2>
-        </header>
+        <nav class="navbar">
+            <div class="navbar-brand">
+                <h2>{% block page_title %}Lab Subnet Monitor{% endblock %}</h2>
+            </div>
+            <div class="navbar-right">
+                <span class="user-info">Logged in as <strong>{{ session.user }}</strong></span>
+                <a href="{{ url_for('logout') }}" class="btn btn-logout">Logout</a>
+            </div>
+        </nav>
 
         <main>
             {% block content %}{% endblock %}

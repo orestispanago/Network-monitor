@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="table-header-bar">
+
+    <div class="header-right">
+        <span>Static: 150.140.194.2-31, DHCP: 150.140.194.32-62</span>
+    </div>
+    <div class="header-left"> Last scan: <time class="utc-time">{{ scan_time }}</time>
+        <a href="/download" class="btn">Download CSV</a>
+    </div>
+</div>
 <div class="table-container">
     <table>
         <thead>
@@ -44,7 +53,7 @@
                         </form>
                         {% else %}
                         <a href="{{ url_for('add_device', mac_address=device.mac_address) }}"
-                            class="btn btn-primary">Add</a>
+                            class="btn btn-add">Add</a>
                         {% endif %}
                         {% else %}
                         <span class="text-muted">-</span>
