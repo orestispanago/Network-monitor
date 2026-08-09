@@ -9,6 +9,7 @@
                 <th>MAC Address</th>
                 <th>Administrator</th>
                 <th>Device Type</th>
+                <th>Hostname</th>
                 <th>Description</th>
                 <th>Floor</th>
                 <th>Ethernet Port</th>
@@ -23,6 +24,7 @@
                 <td class="font-mono">{{ device.mac_address or '-' }}</td>
                 <td>{{ device.administrator or '-' }}</td>
                 <td>{{ device.device_type or '-' }}</td>
+                <td>{{ device.hostname or '-' }}</td>
                 <td>{{ device.description or '-' }}</td>
                 <td>{{ device.floor or '-' }}</td>
                 <td>{{ device.ethernet_port or '-' }}</td>
