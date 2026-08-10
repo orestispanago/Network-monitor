@@ -1,0 +1,7 @@
+DB_NAME = "network.db"
+SCANS_TABLE = "network_scans"
+IP_RANGE = ""
+FTP_IP = ""
+FTP_USER = ""
+FTP_PASSWORD = ""
+FTP_DIR = "/dataloggers/network-monitor"

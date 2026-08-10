@@ -2,28 +2,23 @@ import csv
 import io
 from datetime import datetime, timezone
 from functools import wraps
+
+import db
 from flask import (
     Flask,
     Response,
+    redirect,
     render_template,
     request,
-    redirect,
-    url_for,
     session,
+    url_for,
 )
 from werkzeug.security import check_password_hash
-from config import USERS
-from db import (
-    delete_known_device,
-    get_known_device,
-    get_network_map,
-    add_known_device,
-    update_known_device,
-    get_scan_time,
-)
+
+from config import SECRET_KEY, USERS
 
 app = Flask(__name__)
-app.secret_key = "super-secret-key-change-this-in-production"
+app.secret_key = SECRET_KEY
 
 
 def login_required(f):
@@ -62,7 +57,7 @@ def logout():
 @login_required
 def add_device(mac_address):
     if request.method == "POST":
-        add_known_device(
+        db.add_known_device(
             mac_address=mac_address,
             administrator=request.form.get("administrator"),
             device_type=request.form.get("device_type"),
@@ -78,7 +73,7 @@ def add_device(mac_address):
 @app.route("/delete/<mac_address>", methods=["POST"])
 @login_required
 def delete_device(mac_address):
-    delete_known_device(mac_address)
+    db.delete_known_device(mac_address)
     return redirect(url_for("index"))
 
 
@@ -86,7 +81,7 @@ def delete_device(mac_address):
 @login_required
 def edit_device(mac_address):
     if request.method == "POST":
-        update_known_device(
+        db.update_known_device(
             mac_address=mac_address,
             administrator=request.form.get("administrator"),
             device_type=request.form.get("device_type"),
@@ -96,7 +91,7 @@ def edit_device(mac_address):
             ethernet_port=request.form.get("ethernet_port"),
         )
         return redirect(url_for("index"))
-    device = get_known_device(mac_address)
+    device = db.get_known_device(mac_address)
     return render_template(
         "edit_device.html", device=device, mac_address=mac_address
     )
@@ -105,15 +100,15 @@ def edit_device(mac_address):
 @app.route("/")
 @login_required
 def index():
-    devices = get_network_map()
-    scan_time = get_scan_time()
+    devices = db.get_network_map()
+    scan_time = db.get_scan_time()
     return render_template("home.html", devices=devices, scan_time=scan_time)
 
 
 @app.route("/download")
 @login_required
 def download_csv():
-    devices = get_network_map()
+    devices = db.get_network_map()
     headers = [k for k in devices[0].keys() if k != "is_known"]
     output = io.StringIO()
     writer = csv.writer(output)

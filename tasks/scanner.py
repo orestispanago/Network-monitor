@@ -1,29 +1,20 @@
-import sqlite3
-import subprocess
-import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
-from dataclasses import dataclass
-from ftplib import FTP
 import logging
 import logging.config
 import os
+import sqlite3
+import subprocess
 import traceback
+import xml.etree.ElementTree as ET
+from dataclasses import dataclass
+from datetime import datetime, timezone
 
-dname = os.path.dirname(__file__)
+from config import DB_NAME, IP_RANGE, SCANS_TABLE
+
+dname = os.path.dirname(os.path.dirname(__file__))
 os.chdir(dname)
 
 logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
-
-DB_NAME = "network.db"
-SCANS_TABLE = "network_scans"
-DEVICES_TABLE = "known_devices"
-CSV_NAME = "network.csv"
-IP_RANGE = ""
-FTP_IP = ""
-FTP_USER = ""
-FTP_PASSWORD = ""
-FTP_DIR = "/dataloggers/network-monitor"
 
 
 @dataclass
@@ -47,7 +38,7 @@ def setup_db_table(ip_list, table=SCANS_TABLE):
     curr.execute(f"""
         CREATE TABLE IF NOT EXISTS {table} (
             ip TEXT PRIMARY KEY,
-            mac TEXT,
+            mac_address TEXT,
             vendor TEXT,
             last_seen DATETIME
         )
@@ -145,7 +136,6 @@ def clear_duplicate_macs(cursor, table=SCANS_TABLE):
 def update_db(hosts_list, table=SCANS_TABLE):
     with sqlite3.connect(DB_NAME) as conn:
         curr = conn.cursor()
-        clear_duplicate_macs(curr)
         for host in hosts_list:
             curr.execute(
                 f"""
@@ -160,16 +150,8 @@ def update_db(hosts_list, table=SCANS_TABLE):
                     host.ip,
                 ),
             )
+        clear_duplicate_macs(curr)
         conn.commit()
-
-
-def upload_to_ftp(fname):
-    with FTP(FTP_IP, FTP_USER, FTP_PASSWORD) as ftp_session:
-        ftp_session.cwd(FTP_DIR)
-        remote_path = f"{FTP_DIR}/{fname}"
-        with open(fname, "rb") as f:
-            ftp_session.storbinary(f"STOR {remote_path}", f)
-    logger.debug(f"Uploaded {fname} to {remote_path}")
 
 
 def main():
@@ -179,7 +161,6 @@ def main():
     xml_output = run_nmap_scan()
     hosts = parse_nmap_xml(xml_output)
     update_db(hosts)
-    upload_to_ftp(DB_NAME)
     logger.info(f"{'-' * 15} SUCCESS {'-' * 15}")
 
 

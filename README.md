@@ -1,14 +1,14 @@
 # Network-monitor
 
-`main.py` script:
+`scanner.py` script:
 
 * Parses `nmap` XML output 
 
 * stores host data in an SQLite database
 
-* exports records to csv
+`backup.py` script:
 
-* uploads the csv to FTP server
+* Uploads db to FTP
 
 
 `nmap` command example:
@@ -22,7 +22,7 @@ sudo nmap -sn 10.200.20.130-154 -oX net.xml
 
 Running `nmap` without `sudo` prevents it from resolving MAC address or vendor. 
 
-To run `main.py` via a regular (non-root) user's crontab, 
+To run `scanner.py` via a regular (non-root) user's crontab, 
 grant your user permission to run `sudo nmap` without a password prompt,
 adding `NOPASSWD` rule in `sudoers` file.
 
@@ -45,5 +45,10 @@ Make sure `sudo nmap` is in the code (e.g., via subprocess), to use `NOPASSWD` r
 Now the script can run from a regular crontab e.g. every 10 minutes
 
 ``` bash
-*/10 * * * * python3 ~/Network-monitor/main.py
+*/10 * * * * python3 ~/Network-monitor/scanner.py
+```
+
+For monthly backups to FTP (At 00:00 on first day of the month)
+``` bash
+0 0 1 * * python3 ~/Network-monitor/backup.py
 ```
