@@ -1,35 +1,41 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+{% endblock %}
+
 {% block content %}
 <div class="table-header-bar">
-
     <div class="header-right">
         <span>Static: 150.140.194.2-31, DHCP: 150.140.194.32-62</span>
     </div>
-    <div class="header-left"> Last scan: <time class="utc-time">{{ scan_time }}</time>
+    <div class="header-left">
+        Last scan: <time class="utc-time">{{ scan_time }}</time>
         <a href="/download" class="btn">Download CSV</a>
     </div>
 </div>
+
 <div class="table-container">
-    <table>
+    <table id="devicesTable">
         <thead>
             <tr>
-                <th>IP Address</th>
-                <th>MAC Address</th>
-                <th>Administrator</th>
-                <th>Device Type</th>
-                <th>Hostname</th>
-                <th>Description</th>
-                <th>Floor</th>
-                <th>Ethernet Port</th>
-                <th>Last Seen</th>
+                <th class="sortable" data-type="ip">IP Address</th>
+                <th class="sortable" data-type="text">MAC Address</th>
+                <th class="sortable" data-type="text">Administrator</th>
+                <th class="sortable" data-type="text">Device Type</th>
+                <th class="sortable" data-type="text">Hostname</th>
+                <th class="sortable" data-type="text">Description</th>
+                <th class="sortable" data-type="text">Floor</th>
+                <th class="sortable" data-type="text">Ethernet Port</th>
+                <th class="sortable" data-type="date">Last Seen</th>
+                {% if session.get('user') == 'admin' %}
                 <th>Action</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for device in devices %}
             <tr>
-                <td class="font-mono">{{ device.ip }}</td>
+                <td class="font-mono" data-sort="{{ device.ip }}">{{ device.ip }}</td>
                 <td class="font-mono">{{ device.mac_address or '-' }}</td>
                 <td>{{ device.administrator or '-' }}</td>
                 <td>{{ device.device_type or '-' }}</td>
@@ -37,9 +43,10 @@
                 <td>{{ device.description or '-' }}</td>
                 <td>{{ device.floor or '-' }}</td>
                 <td>{{ device.ethernet_port or '-' }}</td>
-                <td>
-                    <time class="utc-time">{{ device.last_seen or '-' }}</time>
+                <td data-sort="{{ device.last_seen or '' }}">
+                    <time class="utc-time" datetime="{{ device.last_seen or '' }}">{{ device.last_seen or '-' }}</time>
                 </td>
+                {% if session.get('user') == 'admin' %}
                 <td>
                     <div class="actions-cell">
                         {% if device.mac_address %}
@@ -60,9 +67,81 @@
                         {% endif %}
                     </div>
                 </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const table = document.getElementById("devicesTable");
+        if (!table) return;
+
+        const headers = table.querySelectorAll("th.sortable");
+        const tbody = table.querySelector("tbody");
+
+        // Helper: Convert IPv4 string into a 32-bit integer for accurate numeric comparison
+        function ipToNum(ip) {
+            if (!ip || ip === '-') return -1;
+            const parts = ip.split('.').map(Number);
+            if (parts.length !== 4 || parts.some(isNaN)) return -1;
+            return ((parts[0] << 24) >>> 0) + (parts[1] << 16) + (parts[2] << 8) + parts[3];
+        }
+
+        // Helper: Safely extract cell value for sorting
+        function getCellValue(row, index) {
+            const cell = row.children[index];
+            return cell.getAttribute("data-sort") || cell.textContent.trim();
+        }
+
+        headers.forEach((header, colIndex) => {
+            header.addEventListener("click", () => {
+                const currentDir = header.classList.contains("sort-asc") ? "asc" :
+                    header.classList.contains("sort-desc") ? "desc" : "";
+                const newDir = currentDir === "asc" ? "desc" : "asc";
+                const dataType = header.getAttribute("data-type") || "text";
+
+                // Reset sort icons on all columns
+                headers.forEach(h => h.classList.remove("sort-asc", "sort-desc"));
+                header.classList.add(`sort-${newDir}`);
+
+                const rows = Array.from(tbody.querySelectorAll("tr"));
+
+                rows.sort((rowA, rowB) => {
+                    let valA = getCellValue(rowA, colIndex);
+                    let valB = getCellValue(rowB, colIndex);
+
+                    // Push empty values and '-' to the bottom regardless of sort direction
+                    const isEmptyA = !valA || valA === '-';
+                    const isEmptyB = !valB || valB === '-';
+                    if (isEmptyA && isEmptyB) return 0;
+                    if (isEmptyA) return 1;
+                    if (isEmptyB) return -1;
+
+                    let comparison = 0;
+
+                    if (dataType === "ip") {
+                        comparison = ipToNum(valA) - ipToNum(valB);
+                    } else if (dataType === "date") {
+                        const dateA = new Date(valA).getTime() || 0;
+                        const dateB = new Date(valB).getTime() || 0;
+                        comparison = dateA - dateB;
+                    } else {
+                        // Standard text comparison (case-insensitive & numeric-aware e.g. Port 2 vs Port 10)
+                        comparison = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+                    }
+
+                    return newDir === "asc" ? comparison : -comparison;
+                });
+
+                // Re-attach rows in sorted order
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
+    });
+</script>
 {% endblock %}

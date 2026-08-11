@@ -4,9 +4,11 @@ from datetime import datetime, timezone
 from functools import wraps
 
 import db
+from config import SECRET_KEY, USERS
 from flask import (
     Flask,
     Response,
+    abort,
     redirect,
     render_template,
     request,
@@ -14,8 +16,6 @@ from flask import (
     url_for,
 )
 from werkzeug.security import check_password_hash
-
-from config import SECRET_KEY, USERS
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -26,6 +26,18 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if "user" not in session:
             return redirect(url_for("login"))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        if session.get("user") == "guest":
+            abort(403)
         return f(*args, **kwargs)
 
     return decorated_function
@@ -54,7 +66,7 @@ def logout():
 
 
 @app.route("/add/<mac_address>", methods=["GET", "POST"])
-@login_required
+@admin_required
 def add_device(mac_address):
     if request.method == "POST":
         db.add_known_device(
@@ -71,14 +83,14 @@ def add_device(mac_address):
 
 
 @app.route("/delete/<mac_address>", methods=["POST"])
-@login_required
+@admin_required
 def delete_device(mac_address):
     db.delete_known_device(mac_address)
     return redirect(url_for("index"))
 
 
 @app.route("/edit/<mac_address>", methods=["GET", "POST"])
-@login_required
+@admin_required
 def edit_device(mac_address):
     if request.method == "POST":
         db.update_known_device(
