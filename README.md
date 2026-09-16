@@ -8,7 +8,7 @@
 
 `backup.py` script:
 
-* Uploads db to FTP
+* Uploads database to FTP
 
 
 `nmap` command example:
@@ -17,8 +17,11 @@
 sudo nmap -sn 10.200.20.130-154 -oX net.xml
 ```
 
+## Requirements
 
-## `nmap` permissions
+* Python 3.11 or higher
+
+`nmap` permissions
 
 Running `nmap` without `sudo` prevents it from resolving MAC address or vendor. 
 
@@ -40,15 +43,16 @@ lab ALL=(ALL) NOPASSWD: /usr/bin/nmap
 Make sure `sudo nmap` is in the code (e.g., via subprocess), to use `NOPASSWD` rule.
 
 
-## Crontab
+## Cron jobs
 
 Now the script can run from a regular crontab e.g. every 10 minutes
 
 ``` bash
-*/10 * * * * python3 ~/Network-monitor/scanner.py
+*/10 * * * * ~/Network-monitor/.venv314/bin/python /home/lab/Network-monitor/tasks/scanner.py
 ```
 
 For monthly backups to FTP (At 00:00 on first day of the month)
+
 ``` bash
-0 0 1 * * python3 ~/Network-monitor/backup.py
+0 0 1 * * ~/Network-monitor/.venv314/bin/python ~/Network-monitor/tasks/backup.py
 ```
