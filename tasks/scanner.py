@@ -8,10 +8,11 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from config import DB_NAME, IP_RANGE, SCANS_TABLE
+from config import DB_PATH, IP_RANGE, SCANS_TABLE
 
 dname = os.path.dirname(os.path.dirname(__file__))
 os.chdir(dname)
+os.makedirs("logs", exist_ok=True)
 
 logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def create_ip_list():
 
 def setup_db_table(ip_list, table=SCANS_TABLE):
     """Initializes scans table in DB and populates IPs if they don't exist."""
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_PATH)
     curr = conn.cursor()
     curr.execute(f"""
         CREATE TABLE IF NOT EXISTS {table} (
@@ -134,7 +135,7 @@ def clear_duplicate_macs(cursor, table=SCANS_TABLE):
 
 
 def update_db(hosts_list, table=SCANS_TABLE):
-    with sqlite3.connect(DB_NAME) as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         curr = conn.cursor()
         for host in hosts_list:
             curr.execute(

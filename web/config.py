@@ -1,11 +1,14 @@
 import os
 
+from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
 
-USERS = {
-    "admin": generate_password_hash("labsecret123"),
-    "guest": generate_password_hash("guestpassword123"),
-}
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+USERS = {
+    "admin": generate_password_hash(os.environ.get("ADMIN_PASSWORD", "")),
+    "guest": generate_password_hash(os.environ.get("GUEST_PASSWORD", "")),
+}
 DB_PATH = os.path.join(BASE_DIR, "network.db")
-SECRET_KEY = "super-secret-key-change-this-in-production"
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
