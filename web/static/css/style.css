@@ -19,7 +19,6 @@
     --bg-disabled: #f2f4f4;
 
     /* Text Colors */
-    --text-dark: #444444;
     --text-muted: #666666;
     --text-disabled: #7f8c8d;
 
@@ -60,7 +59,7 @@ h2 {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.navbar-brand h1 {
+.navbar-brand h2 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
@@ -175,11 +174,6 @@ tr:hover td {
     padding: 8px 24px;
 }
 
-.scan-info {
-    font-weight: 500;
-    color: var(--text-dark);
-}
-
 /* Buttons */
 .actions-cell {
     display: flex;
@@ -240,22 +234,19 @@ tr:hover td {
 }
 
 .btn-delete,
-.btn-logout,
-.btn-danger {
+.btn-logout {
     background-color: var(--danger-color);
     color: var(--white);
     border-color: var(--danger-color);
 }
 
 .btn-delete:hover,
-.btn-logout:hover,
-.btn-danger:hover {
+.btn-logout:hover {
     background-color: var(--danger-hover);
     border-color: var(--danger-hover);
 }
 
 /* Card & Form Layouts */
-.card-base,
 .login-container,
 .form-card {
     background-color: var(--white);

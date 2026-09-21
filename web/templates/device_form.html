@@ -1,4 +1,7 @@
 <div class="form-card">
+    {% if error %}
+    <div class="error-message">{{ error }}</div>
+    {% endif %}
     {% if form_title %}
     <div class="form-header">
         <h2>{{ form_title }}</h2>

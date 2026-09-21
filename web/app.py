@@ -1,5 +1,6 @@
 import csv
 import io
+import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
 
@@ -69,16 +70,22 @@ def logout():
 @admin_required
 def add_device(mac_address):
     if request.method == "POST":
-        db.add_known_device(
-            mac_address=mac_address,
-            administrator=request.form.get("administrator"),
-            device_type=request.form.get("device_type"),
-            hostname=request.form.get("hostname"),
-            description=request.form.get("description"),
-            floor=request.form.get("floor"),
-            ethernet_port=request.form.get("ethernet_port"),
-        )
-        return redirect(url_for("index"))
+        try:
+            db.add_known_device(
+                mac_address=mac_address,
+                administrator=request.form.get("administrator"),
+                device_type=request.form.get("device_type"),
+                hostname=request.form.get("hostname"),
+                description=request.form.get("description"),
+                floor=request.form.get("floor"),
+                ethernet_port=request.form.get("ethernet_port"),
+            )
+            return redirect(url_for("index"))
+        except sqlite3.IntegrityError:
+            error = "This device has already been added."
+            return render_template(
+                "add_device.html", mac_address=mac_address, error=error
+            )
     return render_template("add_device.html", mac_address=mac_address)
 
 
@@ -121,7 +128,17 @@ def index():
 @login_required
 def download_csv():
     devices = db.get_network_map()
-    headers = [k for k in devices[0].keys() if k != "is_known"]
+    headers = [
+        "ip",
+        "mac_address",
+        "administrator",
+        "device_type",
+        "hostname",
+        "description",
+        "floor",
+        "ethernet_port",
+        "last_seen",
+    ]
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(headers)
