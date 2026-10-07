@@ -29,7 +29,7 @@
                 <label for="device_type">Device Type</label>
                 <select id="device_type" name="device_type">
                     {% set current_type = device.device_type if device else '' %}
-                    {% for option in ['PC', 'Raspberry', 'Server', 'Mini PC', 'NAS', 'Printer', 'Access point'] %}
+                    {% for option in ['PC', 'Raspberry', 'Camera', 'Server', 'Mini PC', 'NAS', 'Printer', 'Access point'] %}
                     <option value="{{ option }}" {% if current_type==option %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
